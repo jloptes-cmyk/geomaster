@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GEOMASTER of the WORLD</title>
+    <style>
+        :root { --bg: #0f172a; --accent: #38bdf8; --glass: rgba(255, 255, 255, 0.1); }
+        body { margin: 0; font-family: 'Segoe UI', sans-serif; background: var(--bg) url('https://transparenttextures.com'); color: white; height: 100vh; display: flex; justify-content: center; align-items: center; overflow: hidden; transition: 0.2s; }
+        .screen { display: none; flex-direction: column; align-items: center; justify-content: center; width: 100%; height: 100%; padding: 20px; text-align: center; }
+        .active { display: flex; }
+        
+        .emergency-mode { animation: flash-red 0.4s infinite; }
+        @keyframes flash-red { 0%, 100% { background-color: var(--bg); } 50% { background-color: #7f1d1d; } }
+
+        .danger-life { animation: heart-pulse 0.6s infinite alternate; color: #ff4444 !important; font-weight: bold; }
+        @keyframes heart-pulse { from { transform: scale(1); opacity: 1; text-shadow: 0 0 5px red; } to { transform: scale(1.15); opacity: 0.6; text-shadow: 0 0 15px red; } }
+
+        .btn { background: var(--accent); color: #0f172a; border: none; padding: 15px 30px; margin: 8px; border-radius: 12px; font-size: 1.1rem; font-weight: bold; cursor: pointer; width: 280px; transition: 0.3s; }
+        .btn:hover { transform: scale(1.05); background: white; }
+        .black-map-main { font-size: 180px; margin: 10px 0; color: black; filter: drop-shadow(0 0 10px rgba(255,255,255,0.4)); animation: float 3.5s ease-in-out infinite; line-height: 1; user-select: none; }
+        .black-map-game { font-size: 80px; margin: 5px; color: black; filter: drop-shadow(0 0 5px rgba(255,255,255,0.5)); animation: float 3s ease-in-out infinite; line-height: 1; }
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-20px); } }
+        
+        #header-game { display: grid; grid-template-columns: 1fr 1fr 1fr; width: 100%; max-width: 850px; margin-bottom: 5px; align-items: center; }
+        #stats { display: flex; gap: 15px; font-size: 1.2rem; font-weight: bold; justify-content: start; }
+        #timer-display { font-family: 'Courier New', Courier, monospace; font-size: 2rem; color: #fbbf24; font-weight: bold; background: black; padding: 5px 15px; border-radius: 8px; border: 2px solid #444; min-width: 100px; }
+        #progress-counter { background: var(--glass); padding: 5px 15px; border-radius: 20px; font-size: 0.9rem; border: 1px solid var(--accent); color: var(--accent); justify-self: end; }
+        
+        .card { background: white; color: #0f172a; padding: 20px 35px; border-radius: 20px; font-size: 1.8rem; font-weight: 800; min-width: 320px; box-shadow: 0 0 25px var(--accent); margin: 15px 0; }
+        .grid-opts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; width: 100%; max-width: 850px; margin: 15px 0; }
+        .btn-opt { background: var(--glass); border: 2px solid white; color: white; padding: 20px 15px; border-radius: 14px; cursor: pointer; font-weight: bold; font-size: 1.2rem; transition: 0.2s; min-height: 70px; display: flex; align-items: center; justify-content: center; }
+        .btn-opt:hover { background: var(--accent); color: #0f172a; border-color: var(--accent); transform: translateY(-2px); }
+        
+        .study-list, .rank-container { overflow-y: auto; max-height: 45vh; width: 100%; max-width: 550px; background: var(--glass); padding: 20px; border-radius: 15px; text-align: left; }
+        .rank-row { display: flex; justify-content: space-between; padding: 8px; border-bottom: 1px solid #444; font-size: 0.9rem; align-items: center; }
+        .overlay { background: rgba(0,0,0,0.95); position: fixed; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 100; }
+        .continent-header { color: var(--accent); font-weight: bold; margin-top: 15px; margin-bottom: 5px; border-bottom: 2px solid var(--accent); padding-bottom: 3px; font-size: 1.1rem; }
+    </style>
+</head>
+<body id="main-body">
+
+    <div id="screen-main" class="screen active">
+        <h1 style="font-size: 2.5rem; margin: 0; letter-spacing: 1px;">GEOMASTER of the WORLD</h1>
+        <div class="black-map-main">&#x1f5fa;&#xfe0e;</div>
+        <button class="btn" onclick="showScreen('screen-levels')">NIVELLS</button>
+        <button class="btn" onclick="showRankingScreen()">RÀNQUINGS</button>
+    </div>
+
+    <div id="screen-levels" class="screen">
+        <h2>Modes de Joc</h2>
+        <button class="btn" onclick="startLevel('easy')">FÀCIL (Continents)</button>
+        <button class="btn" onclick="startLevel('hard')">DIFÍCIL (Capitals)</button>
+        <button class="btn" onclick="startLevel('mixed')">⌛ COMPTE ENRERE - MIX</button>
+        <button class="btn" onclick="showStudy()">ESTUDIAR</button>
+        <button class="btn" style="background:none; color:white;" onclick="showScreen('screen-main')">Tornar</button>
+    </div>
+
+    <div id="screen-game" class="screen">
+        <div id="header-game">
+            <div id="stats">
+                <span>🏆 <span id="v-score">0</span></span>
+                <span id="life-area">❤️ <span id="v-lives">5</span></span>
+            </div>
+            <div id="timer-display">00:00</div>
+            <div id="progress-counter"><span id="v-prog">0/0</span></div>
+        </div>
+        <div id="feedback" style="height:35px; font-weight:bold; margin: 5px;"></div>
+        
+        <div id="game-slot-top"></div>
+        <div class="black-map-game">&#x1f5fa;&#xfe0e;</div>
+        <div id="game-slot-bottom"></div>
+        
+        <button class="btn" style="background:#ef4444; color:white; width:150px; padding:8px; font-size:0.9rem; margin-top:15px;" onclick="exitCurrentGame()">SORTIR</button>
+    </div>
+
+    <div id="overlay-over" class="overlay">
+        <h1 id="over-title" style="color:#f87171; font-size: 3.5rem; margin:0;">GAME OVER</h1>
+        <div style="margin: 20px 0;">
+            <p id="final-score-txt" style="font-size: 1.8rem; margin: 5px 0; font-weight: bold;"></p>
+            <p id="final-time-txt" style="font-size: 1.4rem; color: #fbbf24; margin: 5px 0;"></p>
+            <p id="final-countries-txt" style="font-size: 1.2rem; color: #38bdf8;"></p>
+        </div>
+        <button class="btn" onclick="startLevel(currentMode)">TORNA A JUGAR</button>
+        <button class="btn" onclick="saveScoreAndRank()">DESAR PUNTUACIÓ</button>
+        <button class="btn" style="background:#475569; color:white;" onclick="showScreen('screen-main')">SORTIR</button>
+    </div>
+
+    <div id="screen-ranking" class="screen">
+        <div style="display: flex; gap: 15px; width: 95%; max-width: 1000px; overflow-x: auto;">
+            <div><h3>FÀCIL</h3><div id="rank-easy" class="rank-container" style="width: 240px;"></div></div>
+            <div><h3>DIFÍCIL</h3><div id="rank-hard" class="rank-container" style="width: 240px;"></div></div>
+            <div><h3>MIX</h3><div id="rank-mixed" class="rank-container" style="width: 240px;"></div></div>
+        </div>
+        <button class="btn" onclick="showScreen('screen-main')" style="margin-top: 20px;">Inici</button>
+    </div>
+
+    <div id="screen-study" class="screen">
+        <h2 id="study-title">Biblioteca</h2>
+        <div id="study-list" class="study-list"></div>
+        <button class="btn" onclick="showScreen('screen-main')">Menú</button>
+    </div>
+
+    <script>
+        if (!localStorage.getItem('geomaster_v7_reset')) {
+            localStorage.removeItem('geomaster_ranks');
+            localStorage.setItem('geomaster_v7_reset', 'true');
+        }
+
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playTone(f, t, d, v=0.1) {
+            try {
+                const o = audioCtx.createOscillator(); const g = audioCtx.createGain();
+                o.type = t; o.frequency.setValueAtTime(f, audioCtx.currentTime);
+                g.gain.setValueAtTime(v, audioCtx.currentTime);
+                g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + d);
+                o.connect(g); g.connect(audioCtx.destination);
+                o.start(); o.stop(audioCtx.currentTime + d);
+            } catch(e){}
+        }
+        const sounds = {
+            correct: () => { playTone(600,'sine',0.1); setTimeout(()=>playTone(900,'sine',0.2),50); },
+            wrong: () => playTone(150,'triangle',0.3),
+            alarm: () => { playTone(500, 'sawtooth', 0.1, 0.05); setTimeout(()=>playTone(400, 'sawtooth', 0.1, 0.05), 100); },
+            gameOver: () => { [440, 349, 311, 261].forEach((f,i)=>setTimeout(()=>playTone(f,'sawtooth',0.5,0.05),i*200)); }
+        };
+
+        const db = {
+            "Europa": {
+                "Albània": "Tirana", "Andorra": "Andorra la Vella", "Armènia": "Erevan", "Àustria": "Viena", "Azerbaidjan": "Bakú",
+                "Bèlgica": "Brussel·les", "Bielorússia": "Minsk", "Bòsnia i Hercegovina": "Sarajevo", "Bulgària": "Sòfia", "Xipre": "Nicòsia",
+                "Croàcia": "Zagreb", "Dinamarca": "Copenhaguen", "Eslovàquia": "Bratislava", "Eslovènia": "Ljubljana", "Espanya": "Madrid",
+                "Estònia": "Tallinn", "Finlàndia": "Hèlsinki", "França": "París", "Geòrgia": "Tbilisi", "Alemanya": "Berlín",
+                "Grècia": "Atenes", "Hongria": "Budapest", "Irlanda": "Dublín", "Islàndia": "Reykjavík", "Itàlia": "Roma",
+                "Kazakhstan": "Nursultan", "Letònia": "Riga", "Liechtenstein": "Vaduz", "Lituània": "Vílnius", "Luxemburg": "Luxemburg",
+                "Macedònia del Nord": "Skopje", "Malta": "Valletta", "Moldàvia": "Chisinau", "Mònaco": "Mònaco", "Montenegro": "Podgorica",
+                "Noruega": "Oslo", "Països Baixos": "Amsterdam", "Polònia": "Varsòvia", "Portugal": "Lisboa", "Regne Unit": "Londres",
+                "República Txeca": "Praga", "Romania": "Bucarest", "Rússia": "Moscou", "San Marino": "San Marino", "Sèrbia": "Belgrad",
+                "Suècia": "Estocolm", "Suïssa": "Berna", "Ucraïna": "Kíiv", "Vaticà": "Ciutat del Vaticà"
+            },
+            "Amèrica": {
+                "Antigua i Barbuda": "Saint John's", "Argentina": "Buenos Aires", "Bahames": "Nassau", "Barbados": "Bridgetown", "Belize": "Belmopan",
+                "Bolívia": "Sucre", "Brasil": "Brasília", "Canadà": "Ottawa", "Xile": "Santiago", "Colòmbia": "Bogotà",
+                "Costa Rica": "San José", "Cuba": "L'Havana", "Dominica": "Roseau", "Equador": "Quito", "El Salvador": "San Salvador",
+                "Estats Units": "Washington DC", "Granada": "Saint George's", "Guatemala": "Ciutat de Guatemala", "Guyana": "Georgetown", "Haití": "Port-au-Prince",
+                "Hondures": "Tegucigalpa", "Jamaica": "Kingston", "Mèxic": "Ciutat de Mèxic", "Nicaragua": "Managua", "Panamà": "Ciutat de Panamà",
+                "Paraguai": "Asunción", "Perú": "Lima", "República Dominicana": "Santo Domingo", "Saint Kitts i Nevis": "Basseterre", "Saint Vincent i les Grenadines": "Kingstown",
+                "Saint Lucia": "Castries", "Surinam": "Paramaribo", "Trinitat i Tobago": "Port-of-Spain", "Uruguai": "Montevideo", "Veneçuela": "Caracas"
+            },
+            "Àsia": {
+                "Afganistan": "Kabul", "Aràbia Saudita": "Riad", "Bahrein": "Manama", "Bangladesh": "Dhaka", "Bhutan": "Thimphu",
+                "Brunei": "Bandar Seri Begawan", "Cambodja": "Phnom Penh", "Xina": "Pequín", "Corea del Nord": "Pyongyang", "Corea del Sud": "Seül",
+                "Emirats Àrabs Units": "Abu Dhabi", "Filipines": "Manila", "Índia": "Nova Delhi", "Indonèsia": "Jakarta", "Iran": "Teheran",
+                "Iraq": "Bagdad", "Israel": "Jerusalem", "Japó": "Tòquio", "Jordània": "Amman", "Kuwait": "Kuwait",
+                "Laos": "Vientiane", "Líban": "Beirut", "Malàisia": "Kuala Lumpur", "Maldives": "Malé", "Mongòlia": "Ulan Bator",
+                "Myanmar": "Naypyidaw", "Nepal": "Katmandú", "Oman": "Masqat", "Pakistan": "Islamabad", "Qatar": "Doha",
+                "Quirguizistan": "Bixkek", "Singapur": "Singapur", "Síria": "Damasc", "Sri Lanka": "Sri Jayawardenepura Kotte", "Tadjikistan": "Duixanbe",
+                "Tailàndia": "Bangkok", "Timor Oriental": "Dili", "Turkmenistan": "Aixgabat", "Turquia": "Ankara", "Uzbekistan": "Taixkent",
+                "Vietnam": "Hanoi", "Iemen": "Sanà"
+            },
+            "Àfrica": {
+                "Angola": "Luanda", "Algèria": "Alger", "Benín": "Porto-Novo", "Botswana": "Gaborone", "Burkina Faso": "Ouagadougou",
+                "Burundi": "Gitega", "Cap Verd": "Praia", "Camerun": "Yaoundé", "Txad": "N'Djamena", "Comores": "Moroni",
+                "Congo": "Brazzaville", "Costa d'Ivori": "Yamoussoukro", "Egipte": "El Caire", "Eritrea": "Asmara", "Eswatini": "Mbabane",
+                "Etiòpia": "Addis Abeba", "Gabon": "Libreville", "Gàmbia": "Banjul", "Ghana": "Accra", "Guinea": "Conakry",
+                "Guinea Bissau": "Bissau", "Guinea Equatorial": "Malabo", "Kenya": "Nairobi", "Lesotho": "Maseru", "Libèria": "Monròvia",
+                "Líbia": "Trípoli", "Madagascar": "Antananarivo", "Malawi": "Lilongwe", "Mali": "Bamako", "Marroc": "Rabat",
+                "Maurici": "Port Louis", "Mauritània": "Nouakchott", "Moçambic": "Maputo", "Namíbia": "Windhoek", "Níger": "Niamey",
+                "Nigèria": "Abuja", "República Centreafricana": "Bangui", "República Democràtica del Congo": "Kinshasa", "Rwanda": "Kigali", "Saharaui": "Al-Aaiun",
+                "Santu Tomé i Príncep": "São Tomé", "Senegal": "Dakar", "Seychelles": "Victòria", "Sierra Leone": "Freetown", "Somàlia": "Mogadiscio",
+                "Sud-àfrica": "Pretòria", "Sudan": "Khartum", "Sudan del Sud": "Juba", "Tanzània": "Dodoma", "Togo": "Lomé",
+                "Tunísia": "Tunis", "Uganda": "Kampala", "Djibouti": "Djibouti", "Zàmbia": "Lusaka", "Zimbàbue": "Harare"
+            },
+            "Oceania": {
+                "Austràlia": "Canberra", "Fidji": "Suva", "Kiribati": "Tarawa Sud", "Illes Marshall": "Majuro", "Micronèsia": "Palikir",
+                "Nauru": "Yaren", "Nova Zelanda": "Wellington", "Palau": "Ngerulmud", "Papua Nova Guinea": "Port Moresby", "Salomó": "Honiara",
+                "Samoa": "Apia", "Tonga": "Nuku'alofa", "Tuvalu": "Funafuti", "Vanuatu": "Port Vila"
+            },
+            "Antàrtida": {
+                "Sector Argentí (Base Esperanza)": "Esperanza",
+                "Sector Nord-americà (Base McMurdo)": "McMurdo",
+                "Sector Xinès (Base Kunlun)": "Kunlun",
+                "Sector Francès (Base Dumont d'Urville)": "Dumont d'Urville"
+            }
+        };
+
+        let currentMode = 'easy';
+        let score = 0;
+        let lives = 5;
+        let gameActive = false;
+        let timerVal = 0; 
+        let timerInterval = null;
+        let currentQuestion = null;
+        let questionsList = [];
+        let questionsAnswered = 0;
+        let correctAnswersCount = 0; // Nova variable de control exclusiva per als encerts nets
+        let mixCurrentType = 'easy'; 
+
+        function showScreen(id) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById('overlay-over').style.display = 'none';
+            document.getElementById(id).classList.add('active');
+            cleanEmergencyEffects();
+        }
+
+        function cleanEmergencyEffects() {
+            document.getElementById('main-body').classList.remove('emergency-mode');
+            document.getElementById('life-area').classList.remove('danger-life');
+        }
+
+        function exitCurrentGame() {
+            gameActive = false;
+            clearInterval(timerInterval);
+            showScreen('screen-main');
+        }
+
+        function getAllCountries() {
+            let list = [];
+            for (let continent in db) {
+                for (let country in db[continent]) {
+                    list.push({ country, capital: db[continent][country], continent });
+                }
+            }
+            return list;
+        }
+
+        function startLevel(mode) {
+            currentMode = mode;
+            score = 0;
+            questionsAnswered = 0;
+            correctAnswersCount = 0; // Reiniciem el comptador d'encerts nets al principi
+            gameActive = true;
+            cleanEmergencyEffects();
+            
+            document.getElementById('feedback').innerText = "";
+
+            if (mode === 'hard' || mode === 'mixed') {
+                lives = 10;
+            } else {
+                lives = 5;
+            }
+
+            let all = getAllCountries();
+            questionsList = all.sort(() => Math.random() - 0.5);
+
+            clearInterval(timerInterval);
+
+            if (mode === 'easy' || mode === 'hard') {
+                timerVal = 0; 
+                timerInterval = setInterval(() => {
+                    if (!gameActive) return;
+                    timerVal++;
+                    updateTimerDisplay();
+                }, 1000);
+            } else {
+                timerVal = 90; 
+                timerInterval = setInterval(() => {
+                    if (!gameActive) return;
+                    timerVal--;
+                    if (timerVal === 5) {
+                        document.getElementById('main-body').classList.add('emergency-mode');
+                    }
+                    if (timerVal <= 5 && timerVal > 0) {
+                        sounds.alarm();
+                    }
+                    if (timerVal <= 0) {
+                        endGame(false, "S'ha acabat el temps!");
+                    }
+                    updateTimerDisplay();
+                }, 1000);
+            }
+
+            updateStats();
+            showScreen('screen-game');
+            nextQuestion();
+            updateTimerDisplay();
+        }
+
+        function updateTimerDisplay() {
+            let m = Math.floor(timerVal / 60).toString().padStart(2, '0');
+            let s = (timerVal % 60).toString().padStart(2, '0');
+            document.getElementById('timer-display').innerText = `${m}:${s}`;
+        }
+
+        function updateStats() {
+            document.getElementById('v-score').innerText = score;
+            document.getElementById('v-lives').innerText = lives;
+            document.getElementById('v-prog').innerText = `${questionsAnswered}/${questionsList.length}`;
+            
+            if (lives <= 2) {
+                document.getElementById('life-area').classList.add('danger-life');
+            } else {
+                document.getElementById('life-area').classList.remove('danger-life');
+            }
+        }
+
+        function nextQuestion() {
+            if (questionsAnswered >= questionsList.length || lives <= 0) {
+                endGame(lives > 0, currentMode === 'mixed' ? "Temps esgotat!" : "Has voltat tot el món!");
+                return;
+            }
+
+            currentQuestion = questionsList[questionsAnswered];
+            
+            let topSlot = document.getElementById('game-slot-top');
+            let bottomSlot = document.getElementById('game-slot-bottom');
+            
+            topSlot.innerHTML = "";
+            bottomSlot.innerHTML = "";
+
+            let labelToShow = "";
+            let gridHTML = `<div id="opts-container" class="grid-opts"></div>`;
+
+            if (currentMode === 'mixed') {
+                mixCurrentType = Math.random() < 0.5 ? 'easy' : 'hard';
+            } else {
+                mixCurrentType = currentMode;
+            }
+
+            if (mixCurrentType === 'hard') {
+                labelToShow = currentQuestion.capital;
+            } else {
+                labelToShow = currentQuestion.country;
+            }
+
+            let cardHTML = `<div class="card">${labelToShow}</div>`;
+
+            topSlot.innerHTML = gridHTML;
+            bottomSlot.innerHTML = cardHTML;
+
+            let container = document.getElementById('opts-container');
+            let options = [];
+            let all = getAllCountries();
+
+            if (mixCurrentType === 'easy') {
+                options = Object.keys(db); 
+                options.forEach(opt => {
+                    let b = document.createElement('button');
+                    b.className = 'btn-opt';
+                    b.innerText = opt;
+                    b.onclick = () => checkAnswer(opt, currentQuestion.continent);
+                    container.appendChild(b);
+                });
+            } else {
+                options.push(currentQuestion.country);
+                while (options.length < 3) {
+                    let randomCountry = all[Math.floor(Math.random() * all.length)].country;
+                    if (!options.includes(randomCountry)) options.push(randomCountry);
+                }
+                options.sort(() => Math.random() - 0.5);
+
+                options.forEach(opt => {
+                    let b = document.createElement('button');
+                    b.className = 'btn-opt';
+                    b.innerText = opt;
+                    b.onclick = () => checkAnswer(opt, currentQuestion.country);
+                    container.appendChild(b);
+                });
+            }
+        }
+
+        function checkAnswer(selected, correct) {
+            if (!gameActive) return;
+
+            if (selected === correct) {
+                score += 5; 
+                questionsAnswered++;
+                correctAnswersCount++; // Sumem un encert net indiscutible
+                sounds.correct();
+                document.getElementById('feedback').innerHTML = "<span style='color:#4ade80;'>✓ CORRECTE</span>";
+                updateStats();
+                setTimeout(nextQuestion, 800);
+            } else {
+                lives--;
+                sounds.wrong();
+                updateStats();
+                
+                document.getElementById('feedback').innerHTML = "<span style='color:#f87171;'>✗ INCORRECTE! TORNA-HO A PROVAR</span>";
+                
+                if (lives <= 0) {
+                    endGame(false, "T'has quedat sense vides!");
+                }
+            }
+        }
+
+        function endGame(victory, message) {
+            gameActive = false;
+            clearInterval(timerInterval);
+            cleanEmergencyEffects();
+
+            document.getElementById('over-title').innerText = victory ? "VICTÒRIA!" : "GAME OVER";
+            document.getElementById('over-title').style.color = victory ? "#4ade80" : "#f87171";
+            
+            let m = Math.floor(timerVal / 60).toString().padStart(2, '0');
+            let s = (timerVal % 60).toString().padStart(2, '0');
+            
+            document.getElementById('final-score-txt').innerText = `Punts: ${score}`;
+            document.getElementById('final-time-txt').innerText = `${message} (Temps: ${m}:${s})`;
+            // Canviat exactament per indicar els països encertats de forma neta
+            document.getElementById('final-countries-txt').innerText = `Països encertats: ${correctAnswersCount}`;
+
+            if(!victory) sounds.gameOver();
+            document.getElementById('overlay-over').style.display = 'flex';
+        }
+
+        function saveScoreAndRank() {
+            let name = prompt("Introdueix el teu nom d'explorador:");
+            if (!name) name = "Anònim";
+
+            let ranks = JSON.parse(localStorage.getItem('geomaster_ranks')) || { easy: [], hard: [], mixed: [] };
+            ranks[currentMode].push({ name, score, date: new Date().toLocaleDateString() });
+            ranks[currentMode].sort((a, b) => b.score - a.score);
+            ranks[currentMode] = ranks[currentMode].slice(0, 10);
+
+            localStorage.setItem('geomaster_ranks', JSON.stringify(ranks));
+            showRankingScreen();
+        }
+
+        function showRankingScreen() {
+            showScreen('screen-ranking');
+            let ranks = JSON.parse(localStorage.getItem('geomaster_ranks')) || { easy: [], hard: [], mixed: [] };
+
+            ['easy', 'hard', 'mixed'].forEach(m => {
+                let box = document.getElementById(`rank-${m}`);
+                box.innerHTML = "";
+                if(!ranks[m] || ranks[m].length === 0) {
+                    box.innerHTML = "<div style='color:#888; font-size:0.8rem;'>Sense records</div>";
+                } else {
+                    ranks[m].forEach((r, idx) => {
+                        let prefix = (idx === 0) ? "🥇 " : `${idx + 1}. `;
+                        box.innerHTML += `<div class="rank-row"><span>${prefix}${r.name}</span><strong>${r.score}</strong></div>`;
+                    });
+                }
+            });
+        }
+
+        function showStudy() {
+            showScreen('screen-study');
+            let box = document.getElementById('study-list');
+            box.innerHTML = "";
+            
+            let all = getAllCountries();
+            document.getElementById('study-title').innerText = `Biblioteca (${all.length} Països)`;
+
+            for (let continent in db) {
+                let sectionHTML = `<div class="continent-header">${continent.toUpperCase()}</div>`;
+                let countriesInContinent = Object.keys(db[continent]).sort((a, b) => a.localeCompare(b));
+                
+                countriesInContinent.forEach(country => {
+                    sectionHTML += `<div style='padding:5px 0; border-bottom:1px solid #334155; font-size:0.9rem;'>
+                        <span style='color:#38bdf8;'>${country}</span> - <span style='color:#ccc;'>${db[continent][country]}</span>
+                    </div>`;
+                });
+                box.innerHTML += sectionHTML;
+            }
+        }
+    </script>
+</body>
+</html>
+
+
